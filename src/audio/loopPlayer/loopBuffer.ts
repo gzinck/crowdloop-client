@@ -2,6 +2,7 @@ import { Subject, timer } from 'rxjs';
 import { getLoopLength, getSecondsUntilStart } from '../../utils/beats';
 import { SharedAudioContextContents } from '../../contexts/SharedAudioContext';
 import { CreateAudioReq, SetAudioReq } from '../../client/AudioAPI';
+import Logger, { LogType } from '../../utils/Logger';
 
 const recordingHead = 0.1; // default size of the head for audio files
 const previewSize = 200;
@@ -89,7 +90,6 @@ class LoopBuffer {
   }
 
   public addBuffer(req: SetAudioReq): Promise<void> {
-    console.log('Adding a buffer to loop');
     if (req.packet < 0 || req.packet >= this.buffers.length) {
       throw new Error(`tried to add an audio buffer out of range: ${req.packet}`);
     }
@@ -149,7 +149,6 @@ class LoopBuffer {
     // diregarding the head
 
     const sub = events$.subscribe(({ idx, startTime, curGainNode, prvGainNode }) => {
-      console.log('Playing loop', this.req.loopID);
       const buffer = this.buffers[idx];
 
       // Schedule the next change right away
@@ -163,7 +162,10 @@ class LoopBuffer {
           : // otherwise, just get it the lazy way
             startTime + buffLength;
 
-      const timeUntilNext = nxtStartTime - this.audio.ctx.currentTime - nxtHead - schedulingTime;
+      const timeUntilNext = Math.max(
+        nxtStartTime - this.audio.ctx.currentTime - nxtHead - schedulingTime,
+        0,
+      );
       timer(timeUntilNext * 1000).subscribe(() => {
         events$.next({
           idx: nxtIdx,
@@ -210,10 +212,13 @@ class LoopBuffer {
     // Schedule the first buffer
     const firstHead = this.buffers[0]?.head || recordingHead;
     const timeUntilFirst = getSecondsUntilStart(this.req, this.audio, schedulingTime);
-    const startTime = startTimeRaw && startTimeRaw - this.audio.startTime.time;
-    console.log(this.audio.ctx.currentTime, startTime, this.audio.startTime.time);
+    const startTime = startTimeRaw && startTimeRaw + this.audio.startTime.time;
+    Logger.info(
+      `Starting a new loop at server time ${startTimeRaw} amd client time ${startTime} when curr time is ${this.audio.ctx.currentTime}`,
+      LogType.AUDIO,
+    );
     const firstStartTime =
-      startTime && startTime > this.audio.ctx.currentTime - schedulingTime
+      startTime && startTime > this.audio.ctx.currentTime + schedulingTime
         ? startTime
         : timeUntilFirst + this.audio.ctx.currentTime;
 

@@ -6,6 +6,10 @@ interface TimeSettings {
   nBars: number; // number of bars in new loops
 }
 
+const mod = (n: number, modulus: number): number => {
+  return ((n % modulus) + modulus) % modulus;
+};
+
 /**
  * Gets the the number of seconds before the loop should start.
  * @param time
@@ -20,7 +24,8 @@ export const getSecondsUntilStart = (
 ): number => {
   const deltaTime = audio.ctx.currentTime - audio.startTime.time; // in s
   const loopLength = getLoopLength(time);
-  const timeUntilStart = loopLength - (deltaTime % loopLength);
+  // Edge case where deltaTime is less than 0
+  const timeUntilStart = loopLength - mod(deltaTime, loopLength);
   if (timeUntilStart < minTime) return timeUntilStart + loopLength;
   else return timeUntilStart;
 };

@@ -1,6 +1,7 @@
 export enum LogType {
   MSG_RECEIVED = 'MSG_RECEIVED',
   API_SETUP = 'API_SETUP',
+  AUDIO = 'AUDIO',
 }
 
 // Allows us to quickly enable certain types of logging messages and

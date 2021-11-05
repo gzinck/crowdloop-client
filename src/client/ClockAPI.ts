@@ -4,6 +4,7 @@ import * as events from './events';
 
 interface PingReq {
   startTime: number;
+  deltas?: number[];
 }
 
 class ClockAPI {
