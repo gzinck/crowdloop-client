@@ -16,6 +16,12 @@ interface AudioStartEvent {
   prvGainNode: GainNode;
 }
 
+interface Dimensions {
+  x: number;
+  y: number;
+  radius: number;
+}
+
 interface OffsetedBuffer {
   // A decoded AudioBuffer
   buff: AudioBuffer;
@@ -54,11 +60,14 @@ class LoopBuffer {
   private readonly buffers: (OffsetedBuffer | null)[];
   public readonly preview: Float32Array = new Float32Array(previewSize).fill(0);
   private readonly req: CreateAudioReq;
+  public pos: Dimensions;
   private readonly audio: SharedAudioContextContents;
   private gainNode1: GainNode;
   private gainNode2: GainNode;
   private mainGainNode: GainNode;
+  private volumeGainNode: GainNode;
   public stopped = true;
+  public isMuted = true;
 
   /**
    *
@@ -71,13 +80,19 @@ class LoopBuffer {
   constructor(audio: SharedAudioContextContents, req: CreateAudioReq) {
     this.audio = audio;
     this.req = req;
+    this.pos = { x: req.x, y: req.y, radius: req.radius };
     this.buffers = new Array(req.nPackets).fill(null);
 
     // Gain nodes handle the fade in and out
+    // Proximity gain is for how close the loop is to the current position
+    this.volumeGainNode = audio.ctx.createGain();
+    this.volumeGainNode.gain.value = 0;
+    this.volumeGainNode.connect(audio.ctx.destination);
+
     // Main gain is for the emergency stops
     this.mainGainNode = audio.ctx.createGain();
     this.mainGainNode.gain.value = 0;
-    this.mainGainNode.connect(audio.ctx.destination);
+    this.mainGainNode.connect(this.volumeGainNode);
 
     // Other gain is for fading in/out pieces of the audio file
     this.gainNode1 = audio.ctx.createGain();
@@ -87,6 +102,20 @@ class LoopBuffer {
     this.gainNode2 = audio.ctx.createGain();
     this.gainNode2.gain.value = 0;
     this.gainNode2.connect(this.mainGainNode);
+  }
+
+  public setVolume(vol: number): void {
+    this.volumeGainNode.gain.cancelScheduledValues(this.audio.ctx.currentTime);
+    this.volumeGainNode.gain.setValueAtTime(
+      this.volumeGainNode.gain.value,
+      this.audio.ctx.currentTime,
+    );
+    this.volumeGainNode.gain.linearRampToValueAtTime(vol, this.audio.ctx.currentTime + 0.1);
+    this.isMuted = vol === 0;
+  }
+
+  public move(pos: Dimensions): void {
+    this.pos = pos;
   }
 
   public addBuffer(req: SetAudioReq): Promise<void> {

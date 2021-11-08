@@ -3,13 +3,19 @@ import SharedAudioContext from './SharedAudioContext';
 import APIContext from './APIContext';
 import LoopBuffer from '../audio/loopPlayer/loopBuffer';
 import Logger, { LogType } from '../utils/Logger';
+import { AudiencePos } from '../client/AudienceAPI';
+import { assignVolumeSimpleRadius } from '../utils/volumeAssigner';
 
 interface LoopContextContents {
   loops: Record<string, LoopBuffer>;
+  position: AudiencePos;
+  setPosition: (pos: AudiencePos) => void;
 }
 
 const defaultContents: LoopContextContents = {
   loops: {},
+  position: { x: 0, y: 0 },
+  setPosition: () => null,
 };
 
 const LoopContext = React.createContext<LoopContextContents>(defaultContents);
@@ -22,6 +28,19 @@ export const LoopContextProvider = ({
   const audio = React.useContext(SharedAudioContext);
   const { client } = React.useContext(APIContext);
   const [loops, setLoops] = React.useState<Record<string, LoopBuffer>>({});
+
+  // Keep track of the position in space
+  const [position, setPos] = React.useState<AudiencePos>(defaultContents.position);
+  const setPosition = React.useCallback(
+    (pos: AudiencePos) => {
+      setPos(pos);
+      if (client) client.audience.setPos(pos);
+
+      // Set the volume for each of these
+      assignVolumeSimpleRadius(loops, pos);
+    },
+    [client, loops],
+  );
 
   // Reset the loop map whenever the client changes
   React.useEffect(() => {
@@ -58,10 +77,17 @@ export const LoopContextProvider = ({
           return loops;
         });
       });
+      client.audio.setOnMove((req) => {
+        Logger.info(`moving loop ${req.loopID} to pos (${req.x}, ${req.y})`, LogType.MSG_RECEIVED);
+        setLoops((loops) => {
+          loops[req.loopID].move(req);
+          return { ...loops }; // copy to trigger a refresh and trigger reassignment of loop volumes
+        });
+      });
       client.audio.setOnDelete((req) => {
         Logger.info(`deleting loop ${req.loopID}`, LogType.MSG_RECEIVED);
         setLoops((loops) => {
-          loops[req.loopID]?.stop();
+          loops[req.loopID].stop();
           const newLoops = { ...loops };
           delete loops[req.loopID];
           return newLoops;
@@ -90,6 +116,8 @@ export const LoopContextProvider = ({
     <LoopContext.Provider
       value={{
         loops,
+        position,
+        setPosition,
       }}
     >
       {children}

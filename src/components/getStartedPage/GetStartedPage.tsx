@@ -4,7 +4,7 @@ import { interval } from 'rxjs';
 import styled from 'styled-components';
 import APIContext from '../../contexts/APIContext';
 import SharedAudioContext from '../../contexts/SharedAudioContext';
-import { LOOP_BOARD_ROUTE } from '../../routes';
+import { SET_POS_ROUTE } from '../../routes';
 import theme from '../../theme';
 import Button from '../generic/Button';
 
@@ -34,7 +34,7 @@ const GetStartedPage = (): React.ReactElement => {
       if (audio.ctx.currentTime !== 0) {
         sub.unsubscribe();
         startSession();
-        history.push(LOOP_BOARD_ROUTE);
+        history.push(SET_POS_ROUTE);
       }
     });
 

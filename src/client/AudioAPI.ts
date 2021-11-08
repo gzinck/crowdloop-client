@@ -10,6 +10,9 @@ export interface CreateAudioReq {
   bpm: number; // beats per minute
   nBars: number; // number of bars in new loops
   isStopped?: boolean; // whether the loop is going to play right away or not
+  x: number;
+  y: number;
+  radius: number;
 }
 
 export interface SetAudioReq {
@@ -20,6 +23,13 @@ export interface SetAudioReq {
     head: number;
     length: number;
   };
+}
+
+export interface MoveAudioReq {
+  loopID: string;
+  x: number;
+  y: number;
+  radius: number;
 }
 
 interface PlayAudioReq {
@@ -55,6 +65,7 @@ class AudioAPI {
     this.io.removeAllListeners(events.AUDIO_STOP);
     this.io.removeAllListeners(events.AUDIO_CREATE);
     this.io.removeAllListeners(events.AUDIO_SET);
+    this.io.removeAllListeners(events.AUDIO_MOVE);
     this.io.removeAllListeners(events.AUDIO_DELETE);
   }
 
@@ -73,6 +84,10 @@ class AudioAPI {
 
   public setOnSet(cb: (req: SetAudioReq) => void): void {
     this.io.on(events.AUDIO_SET, cb);
+  }
+
+  public setOnMove(cb: (req: MoveAudioReq) => void): void {
+    this.io.on(events.AUDIO_MOVE, cb);
   }
 
   public setOnDelete(cb: (req: DeleteAudioReq) => void): void {

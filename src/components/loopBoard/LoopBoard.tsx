@@ -1,44 +1,28 @@
 import React from 'react';
 import styled from 'styled-components';
 import LoopContext from '../../contexts/LoopContext';
-import SharedAudioContext from '../../contexts/SharedAudioContext';
-import useRefresh from '../../hooks/useRefresh';
 import theme from '../../theme';
 import LoopDisk from './loopDisk/LoopDisk';
+import Background from '../generic/Background';
 
-const Screen = styled.div`
-  width: 100%;
-  min-height: 100vh;
-`;
-
-const Background = styled.div`
-  width: 100%;
-  padding-top: 5rem;
-  min-height: calc(100vh - 5rem);
-  display: flex;
-  flex-wrap: wrap;
-  align-content: center;
-  justify-content: center;
-  background-color: ${theme.palette.background.default};
+const P = styled.p`
+  color: ${theme.palette.background.contrastText};
+  max-width: 500px;
+  width: 80%;
+  text-align: center;
 `;
 
 const LoopBoard = (): React.ReactElement => {
   const loopCtx = React.useContext(LoopContext);
-  const audio = React.useContext(SharedAudioContext);
-  useRefresh(20);
+  const loops = Object.entries(loopCtx.loops).filter(([, loop]) => !loop.isMuted && !loop.stopped);
 
   return (
-    <Screen>
-      <Background>
-        <p style={{ color: 'white', display: 'block', clear: 'both' }}>
-          {Math.floor(audio.ctx.currentTime - audio.startTime.time)}
-        </p>
-        <p style={{ color: 'white', display: 'block', clear: 'both' }}>{audio.startTime.time}</p>
-        {Object.keys(loopCtx.loops).map((id) => (
-          <LoopDisk loopId={id} key={id} />
-        ))}
-      </Background>
-    </Screen>
+    <Background>
+      {loops.length === 0 && <P>Waiting for something awesome to happen...</P>}
+      {loops.map(([id]) => (
+        <LoopDisk loopId={id} key={id} />
+      ))}
+    </Background>
   );
 };
 
