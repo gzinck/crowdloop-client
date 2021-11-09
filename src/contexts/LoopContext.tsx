@@ -26,7 +26,7 @@ export const LoopContextProvider = ({
   children: React.ReactElement;
 }): React.ReactElement => {
   const audio = React.useContext(SharedAudioContext);
-  const { client } = React.useContext(APIContext);
+  const { client, endSession } = React.useContext(APIContext);
   const [loops, setLoops] = React.useState<Record<string, LoopBuffer>>({});
 
   // Keep track of the position in space
@@ -34,6 +34,7 @@ export const LoopContextProvider = ({
   const setPosition = React.useCallback(
     (pos: AudiencePos) => {
       setPos(pos);
+      console.log('Setting position of loops');
       if (client) client.audience.setPos(pos);
 
       // Set the volume for each of these
@@ -41,6 +42,11 @@ export const LoopContextProvider = ({
     },
     [client, loops],
   );
+
+  // Every time something changes, decide on the loop volumes
+  React.useEffect(() => {
+    assignVolumeSimpleRadius(loops, position);
+  }, [position, loops]);
 
   // Reset the loop map whenever the client changes
   React.useEffect(() => {
@@ -71,24 +77,36 @@ export const LoopContextProvider = ({
       });
       client.audio.setOnSet((req) => {
         Logger.info(`adding packet ${req.packet} to loop ${req.loopID}`, LogType.MSG_RECEIVED);
+        req.file = new Uint8Array(req.file);
+
         // Wrap it so we don't need it as a dependency for useEffect
         setLoops((loops) => {
-          loops[req.loopID].addBuffer(req);
-          return loops;
+          const newLoops = { ...loops };
+          newLoops[req.loopID].addBuffer(req);
+          return newLoops;
         });
       });
       client.audio.setOnMove((req) => {
         Logger.info(`moving loop ${req.loopID} to pos (${req.x}, ${req.y})`, LogType.MSG_RECEIVED);
         setLoops((loops) => {
-          loops[req.loopID].move(req);
-          return { ...loops }; // copy to trigger a refresh and trigger reassignment of loop volumes
+          if (loops[req.loopID] === undefined) {
+            Logger.warning(
+              `could not move loop ${req.loopID} because it was not yet created`,
+              LogType.AUDIO,
+            );
+            return loops;
+          }
+          const newLoops = { ...loops };
+          newLoops[req.loopID].move(req);
+          console.log('Does this trigger a refresh?');
+          return newLoops;
         });
       });
       client.audio.setOnDelete((req) => {
         Logger.info(`deleting loop ${req.loopID}`, LogType.MSG_RECEIVED);
         setLoops((loops) => {
-          loops[req.loopID].stop();
           const newLoops = { ...loops };
+          newLoops[req.loopID].stop();
           delete loops[req.loopID];
           return newLoops;
         });
@@ -107,10 +125,18 @@ export const LoopContextProvider = ({
           return loops;
         });
       });
+      client.session.setOnEnd(() => {
+        Logger.info('stopping session', LogType.MSG_RECEIVED);
+        setLoops((loops) => {
+          Object.values(loops).forEach((loop) => loop.stop());
+          return {};
+        });
+        endSession();
+      });
 
       client.joinSession(); // this will set client as active
     }
-  }, [audio, client]);
+  }, [audio, client, endSession]);
 
   return (
     <LoopContext.Provider

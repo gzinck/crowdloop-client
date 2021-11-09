@@ -15,7 +15,6 @@ const P = styled.p`
 const LoopBoard = (): React.ReactElement => {
   const loopCtx = React.useContext(LoopContext);
   const loops = Object.entries(loopCtx.loops).filter(([, loop]) => !loop.isMuted && !loop.stopped);
-
   return (
     <Background>
       {loops.length === 0 && <P>Waiting for something awesome to happen...</P>}

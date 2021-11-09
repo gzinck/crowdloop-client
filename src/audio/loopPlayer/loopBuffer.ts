@@ -5,7 +5,7 @@ import { CreateAudioReq, SetAudioReq } from '../../client/AudioAPI';
 import Logger, { LogType } from '../../utils/Logger';
 
 const recordingHead = 0.1; // default size of the head for audio files
-const previewSize = 200;
+const previewSize = 100;
 const schedulingTime = 0.05; // time in s before loop start at which point we should start scheduling things
 const stopTime = 0.05; // time to stop the audio if needed ASAP
 
@@ -58,7 +58,8 @@ export interface LoopProgress {
 
 class LoopBuffer {
   private readonly buffers: (OffsetedBuffer | null)[];
-  public readonly preview: Float32Array = new Float32Array(previewSize).fill(0);
+  public readonly rawPreview: Float32Array = new Float32Array(previewSize).fill(0);
+  public preview: Float32Array;
   private readonly req: CreateAudioReq;
   public pos: Dimensions;
   private readonly audio: SharedAudioContextContents;
@@ -78,6 +79,7 @@ class LoopBuffer {
    * @param nBuffers the number of separate audio files in the loop
    */
   constructor(audio: SharedAudioContextContents, req: CreateAudioReq) {
+    this.preview = this.rawPreview; // For now, preview is unscaled
     this.audio = audio;
     this.req = req;
     this.pos = { x: req.x, y: req.y, radius: req.radius };
@@ -105,6 +107,7 @@ class LoopBuffer {
   }
 
   public setVolume(vol: number): void {
+    Logger.info(`setting volume to ${vol}`, LogType.AUDIO);
     this.volumeGainNode.gain.cancelScheduledValues(this.audio.ctx.currentTime);
     this.volumeGainNode.gain.setValueAtTime(
       this.volumeGainNode.gain.value,
@@ -123,7 +126,9 @@ class LoopBuffer {
       throw new Error(`tried to add an audio buffer out of range: ${req.packet}`);
     }
 
-    return this.audio.ctx.decodeAudioData(req.file).then((audioBuffer) => {
+    // This is necessary because the input ArrayBuffer may be detached.
+    const buff = new Uint8Array(req.file).buffer;
+    return this.audio.ctx.decodeAudioData(buff).then((audioBuffer) => {
       this.buffers[req.packet] = {
         buff: audioBuffer,
         length: req.meta.length,
@@ -139,8 +144,15 @@ class LoopBuffer {
       const sourceStart = Math.floor(audioBuffer.sampleRate * req.meta.head);
 
       for (let destPos = destStart; destPos < destStart + destSize; destPos++) {
-        const sourcePos = Math.floor((destPos - destStart) * (sourceSize / destSize)) + sourceStart;
-        this.preview[destPos] = floats[sourcePos];
+        const srcPos = Math.floor((destPos - destStart) * (sourceSize / destSize)) + sourceStart;
+        this.rawPreview[destPos] = floats[srcPos];
+      }
+
+      if (!this.buffers.includes(null)) {
+        // Normalize the preview values to [0, 1]
+        const minVal = this.rawPreview.reduce((curMin, cur) => Math.min(curMin, cur), 0);
+        const maxVal = this.rawPreview.reduce((curMax, cur) => Math.max(curMax, cur), 0);
+        this.preview = this.rawPreview.map((val) => (val - minVal) / (maxVal - minVal));
       }
 
       // If this is the first buffer and we're supposed to be playing, start it
@@ -224,7 +236,7 @@ class LoopBuffer {
       // If the buffer is empty, simply wait until the next buffer begins
       // (already scheduled)
       if (buffer === null) {
-        console.error(`buffer was null in position: ${idx}`);
+        Logger.error(`buffer was null in position: ${idx}`, LogType.AUDIO);
         return;
       }
 

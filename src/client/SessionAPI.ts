@@ -10,8 +10,16 @@ class SessionAPI {
     this.io = io;
   }
 
+  public cleanup(): void {
+    this.io.removeAllListeners(events.SESSION_DELETE);
+  }
+
   public joinSession(): void {
     this.io.emit(events.SESSION_JOIN, this.sessionID);
+  }
+
+  public setOnEnd(cb: () => void): void {
+    this.io.on(events.SESSION_DELETE, cb);
   }
 }
 

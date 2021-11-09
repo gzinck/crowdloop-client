@@ -9,7 +9,7 @@ const serverURL = 'ws://localhost:2000';
 class ClientAPI {
   public readonly audio: AudioAPI;
   public readonly sessionID: string;
-  private readonly session: SessionAPI;
+  public readonly session: SessionAPI;
   public readonly clock: ClockAPI;
   public readonly audience: AudienceAPI;
   public isActive = false;
@@ -33,6 +33,7 @@ class ClientAPI {
     this.clock.cleanup();
     this.audio.cleanup();
     this.audience.cleanup();
+    this.session.cleanup();
   }
 }
 

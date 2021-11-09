@@ -2,7 +2,7 @@ import React from 'react';
 import { useHistory } from 'react-router';
 import ClientAPI from '../client/ClientAPI';
 import SharedAudioContext from './SharedAudioContext';
-import { GET_STARTED_ROUTE } from '../routes';
+import { GET_STARTED_ROUTE, openRoutes, SURVEY_ROUTE } from '../routes';
 import Logger, { LogType } from '../utils/Logger';
 
 const sessionID = 'default';
@@ -26,10 +26,14 @@ export const APIContextProvider = ({
 
   // Start the clock right away
   React.useEffect(() => {
-    if (!client && history.location.pathname !== '/') {
+    if (ctx.currentTime < 1 && !client && !openRoutes[history.location.pathname]) {
+      Logger.info(
+        'redirecting to get started route because time is early and client is not present',
+        LogType.ROUTER,
+      );
       history.push(GET_STARTED_ROUTE);
     }
-  }, [client, history]);
+  }, [ctx, client, history]);
 
   const startSession = React.useCallback(() => {
     setClient((client) => {
@@ -44,7 +48,8 @@ export const APIContextProvider = ({
       if (client) client.cleanup();
       return undefined;
     });
-  }, []);
+    history.push(SURVEY_ROUTE);
+  }, [history]);
 
   return (
     <APIContext.Provider

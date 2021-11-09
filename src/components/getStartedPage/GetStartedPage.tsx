@@ -1,25 +1,11 @@
 import React from 'react';
 import { useHistory } from 'react-router';
 import { interval } from 'rxjs';
-import styled from 'styled-components';
 import APIContext from '../../contexts/APIContext';
 import SharedAudioContext from '../../contexts/SharedAudioContext';
 import { SET_POS_ROUTE } from '../../routes';
-import theme from '../../theme';
 import Button from '../generic/Button';
-
-const Background = styled.div`
-  width: 100%;
-  height: 100vh;
-  box-sizing: border-box;
-  background-color: ${theme.palette.background.default};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  padding: 5rem;
-  color: ${theme.palette.background.contrastText};
-`;
+import Background from '../generic/Background';
 
 const GetStartedPage = (): React.ReactElement => {
   const history = useHistory();

@@ -8,7 +8,10 @@ const Background = styled.div`
   flex-wrap: wrap;
   align-content: center;
   justify-content: center;
+  flex-direction: column;
+  box-sizing: border-box;
   background-color: ${theme.palette.background.default};
+  color: ${theme.palette.background.contrastText};
 `;
 
 export default Background;

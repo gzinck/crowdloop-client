@@ -12,8 +12,8 @@ import Button from '../generic/Button';
 
 const grayLevel = 255;
 const Square = styled.div`
-  height: 100vw;
-  width: 100vw;
+  height: min(100vw, 90vh);
+  width: min(100vw, 90vh);
   background-color: rgba(${grayLevel}, ${grayLevel}, ${grayLevel}, 0.1);
   position: relative;
 `;
@@ -38,16 +38,25 @@ const Stage = styled.div`
   top: 0;
   background-color: ${theme.palette.background.light};
   height: 10%;
+  max-height: 50px;
   width: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  & > p {
+    opacity: 0.5;
+  }
 `;
 
 const Text = styled.p`
   color: ${theme.palette.background.contrastText};
   text-align: center;
   padding: 5px;
+`;
+
+const DoneButton = styled(Button)`
+  margin: 3rem 0;
+  position: relative;
 `;
 
 const PositionChooser = (): React.ReactElement => {
@@ -92,14 +101,14 @@ const PositionChooser = (): React.ReactElement => {
         </Stage>
         <CurPosition {...pos} />
       </Square>
-      <Button
+      <DoneButton
         onClick={() => {
           setPosition(pos);
           history.push(LOOP_BOARD_ROUTE);
         }}
       >
         Done
-      </Button>
+      </DoneButton>
     </Background>
   );
 };

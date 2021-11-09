@@ -12,7 +12,7 @@ export const assignVolumeSimpleRadius = (
   pos: AudiencePos,
 ): void => {
   Object.values(loops).forEach((loop) => {
-    const dist = Math.sqrt(Math.pow(loop.pos.x + pos.x, 2) + Math.pow(loop.pos.y + pos.y, 2));
+    const dist = Math.sqrt(Math.pow(loop.pos.x - pos.x, 2) + Math.pow(loop.pos.y - pos.y, 2));
     const vol = dist <= loop.pos.radius ? 1 : 0;
     loop.setVolume(vol);
   });
