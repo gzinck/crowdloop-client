@@ -1,11 +1,11 @@
-import { Subject, timer } from 'rxjs';
+import { Subject, Subscription, timer } from 'rxjs';
 import { getLoopLength, getSecondsUntilStart } from '../../utils/beats';
 import { SharedAudioContextContents } from '../../contexts/SharedAudioContext';
 import { CreateAudioReq, SetAudioReq } from '../../client/AudioAPI';
 import Logger, { LogType } from '../../utils/Logger';
 
 const recordingHead = 0.1; // default size of the head for audio files
-const previewSize = 100;
+const previewSize = 200;
 const schedulingTime = 0.05; // time in s before loop start at which point we should start scheduling things
 const stopTime = 0.05; // time to stop the audio if needed ASAP
 
@@ -63,6 +63,7 @@ class LoopBuffer {
   private readonly req: CreateAudioReq;
   public pos: Dimensions;
   private readonly audio: SharedAudioContextContents;
+  private playSubscription?: Subscription;
   private gainNode1: GainNode;
   private gainNode2: GainNode;
   private mainGainNode: GainNode;
@@ -169,6 +170,7 @@ class LoopBuffer {
     this.stopped = true;
     this.mainGainNode.gain.setValueAtTime(1, this.audio.ctx.currentTime);
     this.mainGainNode.gain.linearRampToValueAtTime(0, this.audio.ctx.currentTime + stopTime);
+    this.playSubscription?.unsubscribe();
   }
 
   // startTimeRaw should use the startTime for the host, not the client. We convert appropriately.
@@ -189,7 +191,7 @@ class LoopBuffer {
     // NOTE: startTime ALWAYS refers to when the main part of the loop starts,
     // diregarding the head
 
-    const sub = events$.subscribe(({ idx, startTime, curGainNode, prvGainNode }) => {
+    this.playSubscription = events$.subscribe(({ idx, startTime, curGainNode, prvGainNode }) => {
       const buffer = this.buffers[idx];
 
       // Schedule the next change right away
@@ -224,11 +226,17 @@ class LoopBuffer {
         fadeInTime = this.audio.ctx.currentTime;
       }
 
-      prvGainNode.gain.setValueAtTime(1, fadeInTime);
-      prvGainNode.gain.linearRampToValueAtTime(0, startTime);
+      // Immediately swap gain nodes if start time is passed, otherwise go slowly
+      if (fadeInTime >= startTime) {
+        prvGainNode.gain.setValueAtTime(0, fadeInTime);
+        curGainNode.gain.setValueAtTime(1, fadeInTime);
+      } else {
+        prvGainNode.gain.setValueAtTime(1, fadeInTime);
+        prvGainNode.gain.linearRampToValueAtTime(0, startTime);
 
-      curGainNode.gain.setValueAtTime(0, fadeInTime);
-      curGainNode.gain.linearRampToValueAtTime(1, startTime);
+        curGainNode.gain.setValueAtTime(0, fadeInTime);
+        curGainNode.gain.linearRampToValueAtTime(1, startTime);
+      }
 
       // Also make sure the main gain is up
       this.mainGainNode.gain.setValueAtTime(1, fadeInTime);
@@ -245,9 +253,7 @@ class LoopBuffer {
       source.buffer = buffer.buff;
       source.connect(curGainNode);
 
-      // Start playing or stop everything here
       if (!this.stopped) source.start(fadeInTime, offset);
-      else sub.unsubscribe();
     });
 
     // Schedule the first buffer

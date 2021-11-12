@@ -14,6 +14,8 @@ const grayLevel = 255;
 const Square = styled.div`
   height: min(100vw, 90vh);
   width: min(100vw, 90vh);
+  max-width: 30rem;
+  max-height: 30rem;
   background-color: rgba(${grayLevel}, ${grayLevel}, ${grayLevel}, 0.1);
   position: relative;
 `;
@@ -51,12 +53,14 @@ const Stage = styled.div`
 const Text = styled.p`
   color: ${theme.palette.background.contrastText};
   text-align: center;
-  padding: 5px;
+  width: min(100vw, 90vh);
+  max-width: 30rem;
+  box-sizing: border-box;
+  padding: 1rem;
 `;
 
 const DoneButton = styled(Button)`
   margin: 3rem 0;
-  position: relative;
 `;
 
 const PositionChooser = (): React.ReactElement => {
@@ -92,7 +96,7 @@ const PositionChooser = (): React.ReactElement => {
   return (
     <Background>
       <Text>
-        Click in the box below to select where you are in the room. Then, scroll down and click
+        Tap in the box below to select where you are in the room. Then, scroll down and click
         &quot;Done.&quot;
       </Text>
       <Square ref={ref}>

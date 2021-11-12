@@ -7,6 +7,7 @@ import Background from '../generic/Background';
 
 const P = styled.p`
   color: ${theme.palette.background.contrastText};
+  opacity: 0.5;
   max-width: 500px;
   width: 80%;
   text-align: center;
@@ -17,7 +18,7 @@ const LoopBoard = (): React.ReactElement => {
   const loops = Object.entries(loopCtx.loops).filter(([, loop]) => !loop.isMuted && !loop.stopped);
   return (
     <Background>
-      {loops.length === 0 && <P>Waiting for something awesome to happen...</P>}
+      {loops.length === 0 && <P>Waiting...</P>}
       {loops.map(([id]) => (
         <LoopDisk loopId={id} key={id} />
       ))}

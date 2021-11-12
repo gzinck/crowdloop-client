@@ -34,7 +34,6 @@ export const LoopContextProvider = ({
   const setPosition = React.useCallback(
     (pos: AudiencePos) => {
       setPos(pos);
-      console.log('Setting position of loops');
       if (client) client.audience.setPos(pos);
 
       // Set the volume for each of these
@@ -45,7 +44,9 @@ export const LoopContextProvider = ({
 
   // Every time something changes, decide on the loop volumes
   React.useEffect(() => {
-    assignVolumeSimpleRadius(loops, position);
+    if (assignVolumeSimpleRadius(loops, position)) {
+      setLoops((l) => ({ ...l })); // notify that we changed things
+    }
   }, [position, loops]);
 
   // Reset the loop map whenever the client changes
@@ -81,6 +82,13 @@ export const LoopContextProvider = ({
 
         // Wrap it so we don't need it as a dependency for useEffect
         setLoops((loops) => {
+          if (!loops[req.loopID]) {
+            Logger.warning(
+              `could not set packet for loop ${req.loopID} because it was not yet created or was deleted`,
+              LogType.AUDIO,
+            );
+            return loops;
+          }
           const newLoops = { ...loops };
           newLoops[req.loopID].addBuffer(req);
           return newLoops;
@@ -89,9 +97,9 @@ export const LoopContextProvider = ({
       client.audio.setOnMove((req) => {
         Logger.info(`moving loop ${req.loopID} to pos (${req.x}, ${req.y})`, LogType.MSG_RECEIVED);
         setLoops((loops) => {
-          if (loops[req.loopID] === undefined) {
+          if (!loops[req.loopID]) {
             Logger.warning(
-              `could not move loop ${req.loopID} because it was not yet created`,
+              `could not move loop ${req.loopID} because it was not yet created or was deleted`,
               LogType.AUDIO,
             );
             return loops;
@@ -105,6 +113,13 @@ export const LoopContextProvider = ({
       client.audio.setOnDelete((req) => {
         Logger.info(`deleting loop ${req.loopID}`, LogType.MSG_RECEIVED);
         setLoops((loops) => {
+          if (!loops[req.loopID]) {
+            Logger.warning(
+              `could not delete loop ${req.loopID} because it was not yet created or was deleted`,
+              LogType.AUDIO,
+            );
+            return loops;
+          }
           const newLoops = { ...loops };
           newLoops[req.loopID].stop();
           delete loops[req.loopID];
@@ -115,14 +130,14 @@ export const LoopContextProvider = ({
         Logger.info(`playing loop ${req.loopID}`, LogType.MSG_RECEIVED);
         setLoops((loops) => {
           loops[req.loopID]?.start(req.startTime);
-          return loops;
+          return { ...loops };
         });
       });
       client.audio.setOnStop((req) => {
         Logger.info(`stopping loop ${req.loopID}`, LogType.MSG_RECEIVED);
         setLoops((loops) => {
           loops[req.loopID]?.stop();
-          return loops;
+          return { ...loops };
         });
       });
       client.session.setOnEnd(() => {

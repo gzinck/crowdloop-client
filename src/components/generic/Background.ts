@@ -9,7 +9,6 @@ const Background = styled.div`
   align-content: center;
   justify-content: center;
   flex-direction: column;
-  box-sizing: border-box;
   background-color: ${theme.palette.background.default};
   color: ${theme.palette.background.contrastText};
 `;

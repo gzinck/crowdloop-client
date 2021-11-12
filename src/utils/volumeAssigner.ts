@@ -10,10 +10,16 @@ import { AudiencePos } from '../client/AudienceAPI';
 export const assignVolumeSimpleRadius = (
   loops: Record<string, LoopBuffer>,
   pos: AudiencePos,
-): void => {
+): boolean => {
+  let wasChanged = false;
   Object.values(loops).forEach((loop) => {
     const dist = Math.sqrt(Math.pow(loop.pos.x - pos.x, 2) + Math.pow(loop.pos.y - pos.y, 2));
-    const vol = dist <= loop.pos.radius ? 1 : 0;
-    loop.setVolume(vol);
+    const isMuted = dist > loop.pos.radius;
+    if (isMuted !== loop.isMuted) {
+      wasChanged = true;
+      loop.setVolume(isMuted ? 0 : 1);
+    }
   });
+
+  return wasChanged;
 };
