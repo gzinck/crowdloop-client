@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: >-
-          npm i && REACT_APP_SERVER_URL=https://server.crowdloop.ca/server npm run
+          npm i && REACT_APP_SERVER_URL=https://server.crowdloop.ca npm run
           build
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
