@@ -126,6 +126,13 @@ class LoopBuffer {
     if (req.packet < 0 || req.packet >= this.buffers.length) {
       throw new Error(`tried to add an audio buffer out of range: ${req.packet}`);
     }
+    if (this.buffers[req.packet]) {
+      Logger.info(
+        `buffer ${req.packet} was not added because it was already present`,
+        LogType.AUDIO,
+      );
+      return new Promise<void>((r) => r());
+    }
 
     // This is necessary because the input ArrayBuffer may be detached.
     const buff = new Uint8Array(req.file).buffer;
@@ -190,33 +197,35 @@ class LoopBuffer {
 
     // NOTE: startTime ALWAYS refers to when the main part of the loop starts,
     // diregarding the head
-
+    this.playSubscription?.unsubscribe();
     this.playSubscription = events$.subscribe(({ idx, startTime, curGainNode, prvGainNode }) => {
       const buffer = this.buffers[idx];
 
       // Schedule the next change right away
       const nxtIdx = (idx + 1) % this.buffers.length;
       const nxtHead = this.buffers[nxtIdx]?.head || recordingHead;
+
+      // Always calculate startTime using the clock time to ensure we stay on track with updated clock
       const nxtStartTime =
-        nxtIdx === 0
-          ? // if this is the start of the loop, to avoid drift with floating point,
-            // manually calculate the audio start
-            getSecondsUntilStart(this.req, this.audio) + this.audio.ctx.currentTime
-          : // otherwise, just get it the lazy way
-            startTime + buffLength;
+        ((getSecondsUntilStart(this.req, this.audio) + nxtIdx * buffLength) %
+          getLoopLength(this.req)) +
+        this.audio.ctx.currentTime;
 
       const timeUntilNext = Math.max(
         nxtStartTime - this.audio.ctx.currentTime - nxtHead - schedulingTime,
         0,
       );
-      timer(timeUntilNext * 1000).subscribe(() => {
-        events$.next({
-          idx: nxtIdx,
-          startTime: nxtStartTime,
-          curGainNode: prvGainNode,
-          prvGainNode: curGainNode,
+      // Override stop if the subscription fails to unsubscribe (probably not needed)
+      if (!this.stopped) {
+        timer(timeUntilNext * 1000).subscribe(() => {
+          events$.next({
+            idx: nxtIdx,
+            startTime: nxtStartTime,
+            curGainNode: prvGainNode,
+            prvGainNode: curGainNode,
+          });
         });
-      });
+      }
 
       // Swap the gain nodes
       let fadeInTime = startTime - (buffer?.head || recordingHead);
@@ -244,7 +253,7 @@ class LoopBuffer {
       // If the buffer is empty, simply wait until the next buffer begins
       // (already scheduled)
       if (buffer === null) {
-        Logger.error(`buffer was null in position: ${idx}`, LogType.AUDIO);
+        Logger.error(`loop ${this.req.loopID} buffer was null in position: ${idx}`, LogType.AUDIO);
         return;
       }
 

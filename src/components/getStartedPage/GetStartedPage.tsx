@@ -1,4 +1,5 @@
 import React from 'react';
+import styled from 'styled-components';
 import { useHistory } from 'react-router';
 import { interval } from 'rxjs';
 import APIContext from '../../contexts/APIContext';
@@ -6,6 +7,10 @@ import SharedAudioContext from '../../contexts/SharedAudioContext';
 import { SET_POS_ROUTE } from '../../routes';
 import Button from '../generic/Button';
 import Background from '../generic/Background';
+
+const Text = styled.p`
+  text-align: center;
+`;
 
 const GetStartedPage = (): React.ReactElement => {
   const history = useHistory();
@@ -29,7 +34,7 @@ const GetStartedPage = (): React.ReactElement => {
 
   return (
     <Background>
-      <p>Welcome to CrowdLoop! Click the button below to join the session.</p>
+      <Text>Welcome to CrowdLoop! Click the button below to join the session.</Text>
       <Button onClick={startCtx}>{clicked ? 'Joining...' : 'Join session'}</Button>
     </Background>
   );

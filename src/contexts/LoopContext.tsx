@@ -64,17 +64,29 @@ export const LoopContextProvider = ({
       client.clock.setOnClock((delay) => {
         Logger.info(`clock has a delay of ${delay} ms`, LogType.MSG_RECEIVED);
         audio.startTime.setTime(-delay / 1000); // convert to seconds
+
         // Once we have the clock correct, we can start getting audio
         client.audio.refresh();
       });
 
       client.audio.setOnCreate((req) => {
-        Logger.info(`creating loop ${req.loopID}`, LogType.MSG_RECEIVED);
-        const newLoop = new LoopBuffer(audio, req);
-        setLoops((loops) => ({
-          ...loops,
-          [req.loopID]: newLoop,
-        }));
+        setLoops((loops) => {
+          // If already created, don't overwrite. Just move it and set it to playing mode
+          if (loops[req.loopID]) {
+            Logger.info(`create loop ${req.loopID}, but already present`, LogType.MSG_RECEIVED);
+            loops[req.loopID].move(req);
+            if (loops[req.loopID].stopped && !req.isStopped) loops[req.loopID].start();
+            return { ...loops };
+          }
+
+          // Otherwise, create as normal
+          Logger.info(`creating loop ${req.loopID}`, LogType.MSG_RECEIVED);
+          const newLoop = new LoopBuffer(audio, req);
+          return {
+            ...loops,
+            [req.loopID]: newLoop,
+          };
+        });
       });
       client.audio.setOnSet((req) => {
         Logger.info(`adding packet ${req.packet} to loop ${req.loopID}`, LogType.MSG_RECEIVED);
@@ -87,6 +99,8 @@ export const LoopContextProvider = ({
               `could not set packet for loop ${req.loopID} because it was not yet created or was deleted`,
               LogType.AUDIO,
             );
+            // If server is setting something we don't have, time to refresh!
+            client.audio.refresh();
             return loops;
           }
           const newLoops = { ...loops };
@@ -102,6 +116,8 @@ export const LoopContextProvider = ({
               `could not move loop ${req.loopID} because it was not yet created or was deleted`,
               LogType.AUDIO,
             );
+            // If server is moving something we don't have, time to refresh!
+            client.audio.refresh();
             return loops;
           }
           const newLoops = { ...loops };
@@ -129,6 +145,15 @@ export const LoopContextProvider = ({
       client.audio.setOnPlay((req) => {
         Logger.info(`playing loop ${req.loopID}`, LogType.MSG_RECEIVED);
         setLoops((loops) => {
+          if (!loops[req.loopID]) {
+            Logger.warning(
+              `could not play loop ${req.loopID} because it was not yet created or was deleted`,
+              LogType.AUDIO,
+            );
+            // If server is playing something we don't have, time to refresh!
+            client.audio.refresh();
+            return loops;
+          }
           loops[req.loopID]?.start(req.startTime);
           return { ...loops };
         });
@@ -136,7 +161,16 @@ export const LoopContextProvider = ({
       client.audio.setOnStop((req) => {
         Logger.info(`stopping loop ${req.loopID}`, LogType.MSG_RECEIVED);
         setLoops((loops) => {
-          loops[req.loopID]?.stop();
+          if (!loops[req.loopID]) {
+            Logger.warning(
+              `could not stop loop ${req.loopID} because it was not yet created or was deleted`,
+              LogType.AUDIO,
+            );
+            // If server is stopping something we don't have, time to refresh!
+            client.audio.refresh();
+            return loops;
+          }
+          loops[req.loopID].stop();
           return { ...loops };
         });
       });

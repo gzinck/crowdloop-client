@@ -60,7 +60,7 @@ const Text = styled.p`
 `;
 
 const DoneButton = styled(Button)`
-  margin: 3rem 0;
+  margin: 1rem;
 `;
 
 const PositionChooser = (): React.ReactElement => {

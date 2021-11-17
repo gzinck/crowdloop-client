@@ -54,9 +54,11 @@ class AudioAPI {
     this.io = io;
     this.sessionID = sessionID;
 
-    io.onAny((e, ...args) => {
-      console.log(e, args);
-    });
+    if (process.env.NODE_ENV !== 'production') {
+      io.onAny((e, ...args) => {
+        console.log(e, args);
+      });
+    }
   }
 
   public cleanup(): void {

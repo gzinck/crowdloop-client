@@ -9,15 +9,21 @@ export enum LogType {
 // disable others
 class Logger {
   public static info(message: string, type?: LogType): void {
-    console.log(type, message);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(type, message);
+    }
   }
 
   public static warning(message: string, type?: LogType): void {
-    console.log('WARNING', type, message);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('WARNING', type, message);
+    }
   }
 
   public static error(message: string, type?: LogType): void {
-    console.log('ERROR', type, message);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('ERROR', type, message);
+    }
   }
 }
 

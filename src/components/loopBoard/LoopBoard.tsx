@@ -4,6 +4,7 @@ import LoopContext from '../../contexts/LoopContext';
 import theme from '../../theme';
 import LoopDisk from './loopDisk/LoopDisk';
 import Background from '../generic/Background';
+import SyncButton from './SyncButton';
 
 const P = styled.p`
   color: ${theme.palette.background.contrastText};
@@ -18,6 +19,7 @@ const LoopBoard = (): React.ReactElement => {
   const loops = Object.entries(loopCtx.loops).filter(([, loop]) => !loop.isMuted && !loop.stopped);
   return (
     <Background>
+      <SyncButton />
       {loops.length === 0 && <P>Waiting...</P>}
       {loops.map(([id]) => (
         <LoopDisk loopId={id} key={id} />
