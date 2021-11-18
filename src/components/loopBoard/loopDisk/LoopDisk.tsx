@@ -26,23 +26,19 @@ const ShadowedSVG = styled.svg`
 `;
 
 const LoopDisk = ({ loopId }: Props): React.ReactElement => {
-  const loopCtx = React.useContext(LoopContext);
-  const loop = loopCtx.loops[loopId];
+  const { loops, colour } = React.useContext(LoopContext);
+  const loop = loops[loopId];
 
   useRefresh(20); // Keep it up to date
 
   const currAngle = loop && loop.getProgress().normalized * 2 * Math.PI;
 
-  const backgroundColour = loop.stopped
-    ? theme.palette.background.light
-    : theme.palette.primary.default;
-
   return (
     <Disk>
       <ShadowedSVG viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="50" fill={backgroundColour} />
+        <circle cx="50" cy="50" r="50" fill={theme.palette.fun[colour].default} />
         {/* Show a vis for the loop's contents */}
-        <LoopVis radius={50} shape={loop.preview} fill={theme.palette.primary.dark} />
+        <LoopVis radius={50} shape={loop.preview} fill={theme.palette.fun[colour].dark} />
         {/* Show the current position in the loop with a circling cursor */}
         {currAngle !== null && (
           <Sector

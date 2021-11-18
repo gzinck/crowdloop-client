@@ -5,6 +5,8 @@ import theme from '../../theme';
 import LoopDisk from './loopDisk/LoopDisk';
 import Background from '../generic/Background';
 import SyncButton from './SyncButton';
+import Snackbar from '../generic/Snackbar';
+import useOnClick from '../../hooks/useOnClick';
 
 const P = styled.p`
   color: ${theme.palette.background.contrastText};
@@ -15,15 +17,25 @@ const P = styled.p`
 `;
 
 const LoopBoard = (): React.ReactElement => {
-  const loopCtx = React.useContext(LoopContext);
-  const loops = Object.entries(loopCtx.loops).filter(([, loop]) => !loop.isMuted && !loop.stopped);
+  const { loops, randomizeColour, colour } = React.useContext(LoopContext);
+  const currLoops = Object.entries(loops).filter(([, loop]) => !loop.isMuted && !loop.stopped);
+
+  const ref = React.useRef(null);
+  useOnClick(ref, randomizeColour);
+  console.log(colour);
+
   return (
-    <Background>
+    <Background ref={ref}>
       <SyncButton />
-      {loops.length === 0 && <P>Waiting...</P>}
-      {loops.map(([id]) => (
+      {currLoops.length === 0 && <P>Waiting...</P>}
+      {currLoops.map(([id]) => (
         <LoopDisk loopId={id} key={id} />
       ))}
+      <Snackbar
+        message={
+          'If you have any technical issues during the performance, try hitting the "Fix timing" or "Reset" buttons at the top of the screen.'
+        }
+      />
     </Background>
   );
 };

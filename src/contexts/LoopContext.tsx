@@ -5,17 +5,22 @@ import LoopBuffer from '../audio/loopPlayer/loopBuffer';
 import Logger, { LogType } from '../utils/Logger';
 import { AudiencePos } from '../client/AudienceAPI';
 import { assignVolumeSimpleRadius } from '../utils/volumeAssigner';
+import theme from '../theme';
 
 interface LoopContextContents {
   loops: Record<string, LoopBuffer>;
   position: AudiencePos;
   setPosition: (pos: AudiencePos) => void;
+  colour: number; // index into the fun colour palette for the screen
+  randomizeColour: () => void;
 }
 
 const defaultContents: LoopContextContents = {
   loops: {},
   position: { x: 0, y: 0 },
   setPosition: () => null,
+  colour: 0,
+  randomizeColour: () => null,
 };
 
 const LoopContext = React.createContext<LoopContextContents>(defaultContents);
@@ -187,12 +192,24 @@ export const LoopContextProvider = ({
     }
   }, [audio, client, endSession]);
 
+  // Colour (for fun)
+  const [colour, setColour] = React.useState(0);
+  const randomizeColour = React.useCallback(() => {
+    setColour((colour) => {
+      let newColour = Math.floor(Math.random() * theme.palette.fun.length);
+      while (newColour === colour) newColour = Math.floor(Math.random() * theme.palette.fun.length);
+      return newColour;
+    });
+  }, []);
+
   return (
     <LoopContext.Provider
       value={{
         loops,
         position,
         setPosition,
+        colour,
+        randomizeColour,
       }}
     >
       {children}

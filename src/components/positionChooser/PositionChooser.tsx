@@ -9,11 +9,14 @@ import { GET_STARTED_ROUTE, LOOP_BOARD_ROUTE } from '../../routes';
 import theme from '../../theme';
 import Background from '../generic/Background';
 import Button from '../generic/Button';
+import Cookies from 'js-cookie';
+
+const locationCookieKey = 'position-in-room';
 
 const grayLevel = 255;
 const Square = styled.div`
-  height: min(100vw, 90vh);
-  width: min(100vw, 90vh);
+  height: min(80vw, 70vh);
+  width: min(80vw, 70vh);
   max-width: 30rem;
   max-height: 30rem;
   background-color: rgba(${grayLevel}, ${grayLevel}, ${grayLevel}, 0.1);
@@ -53,7 +56,7 @@ const Stage = styled.div`
 const Text = styled.p`
   color: ${theme.palette.background.contrastText};
   text-align: center;
-  width: min(100vw, 90vh);
+  width: min(80vw, 70vh);
   max-width: 30rem;
   box-sizing: border-box;
   padding: 1rem;
@@ -69,6 +72,11 @@ const PositionChooser = (): React.ReactElement => {
   const [pos, setPos] = React.useState({ x: 0.5, y: 0.5 });
   const { setPosition } = React.useContext(LoopContext);
   const { client } = React.useContext(APIContext);
+
+  React.useEffect(() => {
+    const position = Cookies.get(locationCookieKey);
+    if (position) setPos(JSON.parse(position));
+  }, []);
 
   React.useEffect(() => {
     if (!client) history.push(GET_STARTED_ROUTE);
@@ -108,6 +116,7 @@ const PositionChooser = (): React.ReactElement => {
       <DoneButton
         onClick={() => {
           setPosition(pos);
+          Cookies.set(locationCookieKey, JSON.stringify(pos), { expires: 1 });
           history.push(LOOP_BOARD_ROUTE);
         }}
       >

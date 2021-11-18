@@ -1,74 +1,81 @@
 import React from 'react';
 import styled from 'styled-components';
 import Button from '../generic/Button';
-import { interval, Subscription, timer } from 'rxjs';
+import { interval, Subscription } from 'rxjs';
 import APIContext from '../../contexts/APIContext';
 import theme from '../../theme';
 import SharedAudioContext from '../../contexts/SharedAudioContext';
 import { useHistory } from 'react-router';
-import { SET_POS_ROUTE } from '../../routes';
+import { GET_STARTED_ROUTE } from '../../routes';
 
-const TopButton = styled(Button)`
+const TopBar = styled.div`
   position: fixed;
   top: 1rem;
   right: 1rem;
+  z-index: 3;
+  max-width: calc(100% - 2rem);
+`;
+
+const TopButton = styled(Button)`
   background-color: ${theme.palette.background.light};
   color: ${theme.palette.background.contrastText};
 `;
 
 const SyncButton = (): React.ReactElement => {
-  const { startSession, client } = React.useContext(APIContext);
+  const { client } = React.useContext(APIContext);
   const { ctx } = React.useContext(SharedAudioContext);
-  const [sub, setSub] = React.useState<Subscription | null>(null);
+  const sub = React.useRef<Subscription | null>(null);
+  const [loading, setLoading] = React.useState(false);
   const history = useHistory();
 
-  const reconnect = () => {
-    if (sub) sub.unsubscribe();
-    if (ctx.state !== 'running') ctx.resume();
-    const curSub = interval(50).subscribe(() => {
-      if (ctx.currentTime !== 0 && ctx.state === 'running') {
-        curSub.unsubscribe();
-        setSub(null);
-        startSession();
-        history.push(SET_POS_ROUTE);
-      }
+  // At the end, unsubscribe from anything left
+  React.useEffect(() => {
+    return () => sub.current?.unsubscribe();
+  }, []);
+
+  React.useEffect(() => {
+    const clockSub = client?.clock.isSyncing$.subscribe((isLoading) => {
+      setLoading(isLoading);
     });
-    setSub(curSub);
+    return () => clockSub?.unsubscribe();
+  }, [client]);
+
+  const reconnect = () => {
+    history.push(GET_STARTED_ROUTE);
   };
 
   const sync = () => {
-    if (sub) sub.unsubscribe();
+    setLoading(true);
+    if (sub.current) sub.current.unsubscribe();
     if (ctx.state !== 'running') ctx.resume();
-    const curSub = interval(50).subscribe(() => {
+    sub.current = interval(50).subscribe(() => {
       if (ctx.currentTime !== 0 && ctx.state === 'running') {
-        curSub.unsubscribe();
-        timer(5000).subscribe(() => setSub(null));
+        sub.current?.unsubscribe();
+        sub.current = null;
         client?.clock.getClock();
       }
     });
-    setSub(curSub);
   };
 
   if (!client) {
-    return (
-      <Button disabled={sub !== null} onClick={reconnect}>
-        {sub ? 'Loading...' : 'Reconnect'}
-      </Button>
-    );
+    return <Button onClick={reconnect}>Reset</Button>;
   }
 
   if (ctx.state !== 'running') {
     return (
-      <Button disabled={sub !== null} onClick={sync}>
-        {sub ? 'Loading...' : 'Resume'}
+      <Button disabled={loading} onClick={sync}>
+        {loading ? 'Loading...' : 'Resume'}
       </Button>
     );
   }
 
   return (
-    <TopButton disabled={sub !== null} onClick={sync}>
-      {sub ? 'Loading...' : 'Fix timing'}
-    </TopButton>
+    <TopBar>
+      <TopButton onClick={reconnect}>Reset</TopButton>
+      <TopButton disabled={loading} onClick={sync}>
+        {loading ? 'Loading...' : 'Fix timing'}
+      </TopButton>
+    </TopBar>
   );
 };
 

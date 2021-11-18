@@ -1,4 +1,4 @@
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import AudienceAPI from './AudienceAPI';
 import AudioAPI from './AudioAPI';
 import ClockAPI from './ClockAPI';
@@ -7,6 +7,7 @@ import SessionAPI from './SessionAPI';
 const URL = 'ws://localhost:2000';
 
 class ClientAPI {
+  private readonly socket: Socket;
   public readonly audio: AudioAPI;
   public readonly sessionID: string;
   public readonly session: SessionAPI;
@@ -15,12 +16,12 @@ class ClientAPI {
   public isActive = false;
 
   constructor(ctx: AudioContext, sessionID: string) {
-    const socket = io(process.env.REACT_APP_SERVER_URL || URL);
+    this.socket = io(process.env.REACT_APP_SERVER_URL || URL);
     this.sessionID = sessionID;
-    this.audio = new AudioAPI(socket, sessionID);
-    this.session = new SessionAPI(socket, sessionID);
-    this.clock = new ClockAPI(socket, ctx, sessionID);
-    this.audience = new AudienceAPI(socket, sessionID);
+    this.audio = new AudioAPI(this.socket, sessionID);
+    this.session = new SessionAPI(this.socket, sessionID);
+    this.clock = new ClockAPI(this.socket, ctx, sessionID);
+    this.audience = new AudienceAPI(this.socket, sessionID);
   }
 
   public joinSession(): void {
@@ -34,6 +35,7 @@ class ClientAPI {
     this.audio.cleanup();
     this.audience.cleanup();
     this.session.cleanup();
+    this.socket.close();
   }
 }
 

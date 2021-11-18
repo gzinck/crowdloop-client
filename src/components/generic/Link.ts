@@ -1,12 +1,24 @@
 import styled from 'styled-components';
 import theme from '../../theme';
 
-const Link = styled.a`
+export enum LinkVariant {
+  PRIMARY,
+  SECONDARY,
+}
+
+interface Props {
+  variant?: LinkVariant;
+}
+
+const Link = styled.a<Props>`
   text-decoration: none;
   text-align: center;
   display: block;
   clear: both;
-  background-color: ${theme.palette.primary.default};
+  background-color: ${({ variant }) =>
+    variant === LinkVariant.SECONDARY
+      ? theme.palette.background.light
+      : theme.palette.primary.default};
   color: ${theme.palette.primary.contrastText};
   padding: 0.5rem 1rem;
   border-radius: 0.4rem;

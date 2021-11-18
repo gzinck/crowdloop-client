@@ -1,3 +1,4 @@
+import { BehaviorSubject, Observable } from 'rxjs';
 import { Socket } from 'socket.io-client';
 import Logger, { LogType } from '../utils/Logger';
 import * as events from './events';
@@ -11,12 +12,17 @@ class ClockAPI {
   private readonly sessionID: string;
   private readonly io: Socket;
 
+  // Expose only the observable
+  private readonly syncSubject$ = new BehaviorSubject<boolean>(true);
+  public readonly isSyncing$: Observable<boolean> = this.syncSubject$;
+
   constructor(io: Socket, ctx: AudioContext, sessionID: string) {
     this.sessionID = sessionID;
     this.io = io;
 
     io.on(events.CLOCK_PING, (req: PingReq) => {
       Logger.info(`got a ping with startTime ${req.startTime}`, LogType.MSG_RECEIVED);
+      this.syncSubject$.next(true);
       io.emit(events.CLOCK_PONG, {
         ...req,
         sessionID: this.sessionID,
@@ -26,10 +32,14 @@ class ClockAPI {
   }
 
   public setOnClock(cb: (delay: number) => void): void {
-    this.io.on(events.CLOCK_GET, cb);
+    this.io.on(events.CLOCK_GET, (delay: number) => {
+      this.syncSubject$.next(false);
+      cb(delay);
+    });
   }
 
   public getClock(): void {
+    this.syncSubject$.next(true);
     this.io.emit(events.CLOCK_GET);
   }
 

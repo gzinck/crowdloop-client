@@ -20,7 +20,7 @@ export const APIContextProvider = ({
 }: {
   children: React.ReactElement;
 }): React.ReactElement => {
-  const { ctx } = React.useContext(SharedAudioContext);
+  const { ctx, startTime } = React.useContext(SharedAudioContext);
   const history = useHistory();
   const [client, setClient] = React.useState<ClientAPI>();
 
@@ -36,12 +36,13 @@ export const APIContextProvider = ({
   }, [ctx, client, history]);
 
   const startSession = React.useCallback(() => {
+    startTime.setTime(0); // reset
     setClient((client) => {
       if (client) client.cleanup();
       Logger.info(`setting up new client ${sessionID}`, LogType.API_SETUP);
       return new ClientAPI(ctx, sessionID);
     });
-  }, [ctx]);
+  }, [ctx, startTime]);
 
   const endSession = React.useCallback(() => {
     setClient((client) => {
