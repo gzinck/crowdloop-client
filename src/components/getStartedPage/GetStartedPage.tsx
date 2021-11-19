@@ -60,7 +60,7 @@ const GetStartedPage = (): React.ReactElement => {
       )}
       {(status === STATUS.CONNECTING || status === STATUS.READY) && (
         <Text>
-          While you wait, turn up your phone&#32;s volume and turn off mute. If possible, turn on
+          While you wait, turn up your phone&#39;s volume and turn off mute. If possible, turn on
           &quot;Do Not Disturb&quot; mode on your device.
         </Text>
       )}
