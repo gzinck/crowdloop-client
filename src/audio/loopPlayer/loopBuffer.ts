@@ -90,7 +90,7 @@ class LoopBuffer {
     // Proximity gain is for how close the loop is to the current position
     this.volumeGainNode = audio.ctx.createGain();
     this.volumeGainNode.gain.value = 0;
-    this.volumeGainNode.connect(audio.ctx.destination);
+    this.volumeGainNode.connect(audio.destination);
 
     // Main gain is for the emergency stops
     this.mainGainNode = audio.ctx.createGain();

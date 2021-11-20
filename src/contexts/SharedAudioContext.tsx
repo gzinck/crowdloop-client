@@ -16,17 +16,36 @@ class MutableTime {
 
 export interface SharedAudioContextContents {
   ctx: AudioContext;
+  destination: AudioNode;
   // local time when the global session started, in seconds, factoring in delay with the server
   // NOTE: this might be negative!
   startTime: MutableTime;
 }
 
-// Singleton so we don't accidentally instantiate multiple contexts
-class AudioContextSingleton {
-  private static ctx?: AudioContext;
-  public static getCtx(): AudioContext {
-    if (!this.ctx) this.ctx = new AudioContext();
-    return this.ctx;
+// Singleton design pattern so we don't accidentally make multiple audio contexts
+class DefaultContents {
+  private static contents?: SharedAudioContextContents;
+  public static get(): SharedAudioContextContents {
+    if (!DefaultContents.contents) {
+      const ctx = new AudioContext();
+
+      // For old iOS compatability, create the compressor in this gross way
+      const destination = ctx.createDynamicsCompressor();
+      destination.attack.setValueAtTime(0.003, ctx.currentTime);
+      destination.knee.setValueAtTime(30, ctx.currentTime);
+      destination.ratio.setValueAtTime(12, ctx.currentTime);
+      destination.release.setValueAtTime(0.25, ctx.currentTime);
+      destination.threshold.setValueAtTime(-24, ctx.currentTime);
+      destination.connect(ctx.destination);
+
+      DefaultContents.contents = {
+        ctx,
+        destination,
+        startTime: new MutableTime(0),
+      };
+    }
+
+    return DefaultContents.contents;
   }
 }
 
@@ -40,15 +59,8 @@ export const SharedAudioContextProvider = ({
 }: {
   children: React.ReactElement;
 }): React.ReactElement => {
-  const time = React.useRef<MutableTime>(new MutableTime(0));
-
   return (
-    <SharedAudioContext.Provider
-      value={{
-        ctx: AudioContextSingleton.getCtx(),
-        startTime: time.current,
-      }}
-    >
+    <SharedAudioContext.Provider value={DefaultContents.get()}>
       {children}
     </SharedAudioContext.Provider>
   );
