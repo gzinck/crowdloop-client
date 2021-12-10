@@ -1,4 +1,6 @@
 import React from 'react';
+import LimiterNode from 'audio-limiter';
+import { limiterLookaheadDelay } from '../audio/constants';
 
 // This is ugly, but we need a way to update the current time
 // in non-react objects, so we need a "pointer" to the current
@@ -29,18 +31,28 @@ class DefaultContents {
     if (!DefaultContents.contents) {
       const ctx = new AudioContext();
 
+      // Sound architecture: [NODES] => [compressor] => [gain] => [limiter] => [destination]
+      const limiter = new LimiterNode(ctx, { time: limiterLookaheadDelay });
+      limiter.connect(ctx.destination);
+
+      // Increase gain to 4 to really compress audio so it's always loud.
+      // Clipping is avoided using the limiter, so it'll output fine.
+      const gain = ctx.createGain();
+      gain.gain.value = 4;
+      gain.connect(limiter);
+
       // For old iOS compatability, create the compressor in this gross way
-      const destination = ctx.createDynamicsCompressor();
-      destination.attack.setValueAtTime(0.003, ctx.currentTime);
-      destination.knee.setValueAtTime(30, ctx.currentTime);
-      destination.ratio.setValueAtTime(12, ctx.currentTime);
-      destination.release.setValueAtTime(0.25, ctx.currentTime);
-      destination.threshold.setValueAtTime(-24, ctx.currentTime);
-      destination.connect(ctx.destination);
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+      compressor.knee.setValueAtTime(30, ctx.currentTime);
+      compressor.ratio.setValueAtTime(12, ctx.currentTime);
+      compressor.release.setValueAtTime(0.25, ctx.currentTime);
+      compressor.threshold.setValueAtTime(-24, ctx.currentTime);
+      compressor.connect(gain);
 
       DefaultContents.contents = {
         ctx,
-        destination,
+        destination: compressor,
         startTime: new MutableTime(0),
       };
     }

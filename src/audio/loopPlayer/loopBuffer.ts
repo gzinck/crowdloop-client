@@ -3,6 +3,7 @@ import { getLoopLength, getSecondsUntilStart } from '../../utils/beats';
 import { SharedAudioContextContents } from '../../contexts/SharedAudioContext';
 import { CreateAudioReq, SetAudioReq } from '../../client/AudioAPI';
 import Logger, { LogType } from '../../utils/Logger';
+import { limiterLookaheadDelay } from '../constants';
 
 const recordingHead = 0.1; // default size of the head for audio files
 const previewSize = 200;
@@ -212,7 +213,11 @@ class LoopBuffer {
         this.audio.ctx.currentTime;
 
       const timeUntilNext = Math.max(
-        nxtStartTime - this.audio.ctx.currentTime - nxtHead - schedulingTime,
+        nxtStartTime -
+          this.audio.ctx.currentTime -
+          nxtHead -
+          schedulingTime -
+          limiterLookaheadDelay,
         0,
       );
       // Override stop if the subscription fails to unsubscribe (probably not needed)
@@ -228,7 +233,7 @@ class LoopBuffer {
       }
 
       // Swap the gain nodes
-      let fadeInTime = startTime - (buffer?.head || recordingHead);
+      let fadeInTime = startTime - (buffer?.head || recordingHead) - limiterLookaheadDelay;
       let offset: number | undefined = undefined;
       if (fadeInTime < this.audio.ctx.currentTime) {
         offset = this.audio.ctx.currentTime - fadeInTime;
@@ -267,7 +272,11 @@ class LoopBuffer {
 
     // Schedule the first buffer
     const firstHead = this.buffers[0]?.head || recordingHead;
-    const timeUntilFirst = getSecondsUntilStart(this.req, this.audio, schedulingTime);
+    const timeUntilFirst = getSecondsUntilStart(
+      this.req,
+      this.audio,
+      schedulingTime + limiterLookaheadDelay,
+    );
     const startTime = startTimeRaw && startTimeRaw + this.audio.startTime.time;
     Logger.info(
       `Starting a new loop at server time ${startTimeRaw} amd client time ${startTime} when curr time is ${this.audio.ctx.currentTime}`,
@@ -278,7 +287,7 @@ class LoopBuffer {
         ? startTime
         : timeUntilFirst + this.audio.ctx.currentTime;
 
-    timer((timeUntilFirst - firstHead - schedulingTime) * 1000).subscribe(() => {
+    timer((timeUntilFirst - firstHead - schedulingTime - firstStartTime) * 1000).subscribe(() => {
       events$.next({
         idx: 0,
         startTime: firstStartTime,

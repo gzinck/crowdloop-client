@@ -17,12 +17,11 @@ const P = styled.p`
 `;
 
 const LoopBoard = (): React.ReactElement => {
-  const { loops, randomizeColour, colour } = React.useContext(LoopContext);
+  const { loops, randomizeColour } = React.useContext(LoopContext);
   const currLoops = Object.entries(loops).filter(([, loop]) => !loop.isMuted && !loop.stopped);
 
   const ref = React.useRef(null);
   useOnClick(ref, randomizeColour);
-  console.log(colour);
 
   return (
     <Background ref={ref}>
