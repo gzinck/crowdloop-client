@@ -68,7 +68,12 @@ export const LoopContextProvider = ({
       // Set the clock's delay (callback after join session)
       client.clock.setOnClock((delay) => {
         Logger.info(`clock has a delay of ${delay} ms`, LogType.MSG_RECEIVED);
-        audio.startTime.setTime(-delay / 1000); // convert to seconds
+        // audio.startTime.setTime(-delay / 1000); // convert to seconds
+
+        // @TODO: make this more elegant. Right now, we're ignoring the clock
+        //  difference and we're just using the actual clock of the phone to
+        //  keep in sync. If this actually works, we should do something about it!
+        audio.startTime.setTime(-Date.now() / 1000 + audio.ctx.currentTime);
 
         // Once we have the clock correct, we can start getting audio
         client.audio.refresh();

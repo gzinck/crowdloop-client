@@ -278,6 +278,7 @@ class LoopBuffer {
       schedulingTime + limiterLookaheadDelay,
     );
     const startTime = startTimeRaw && startTimeRaw + this.audio.startTime.time;
+    console.log(`FYI: start time for audio ctx is ${this.audio.startTime.time}`);
     Logger.info(
       `Starting a new loop at server time ${startTimeRaw} amd client time ${startTime} when curr time is ${this.audio.ctx.currentTime}`,
       LogType.AUDIO,
